@@ -10,6 +10,7 @@ Basic Command Line Usage:
   jekyll <path to write generated site>                    # . -> <path>
   jekyll <path to source> <path to write generated site>   # <path> -> <path>
   jekyll import <importer name> <options>                  # imports posts using named import script
+  jekyll new <path to generate basic structure>            # creates a new blog scaffold
   
   Configuration is read from '<source>/_config.yml' but can be overriden
   using the following options:
@@ -18,7 +19,8 @@ HELP
 
 require 'optparse'
 require 'jekyll'
-
+require 'fileutils'
+require 'date'
 
 exec = {}
 options = {}
@@ -198,6 +200,69 @@ if ARGV.size > 0
       puts "Invalid migrator. Run `jekyll --help` for assistance."
       exit(1)
     end
+    
+    exit(0)
+  elsif ARGV[0] == 'new'
+    blog = ARGV[1]
+    blog_root = File.expand_path(blog)
+
+    FileUtils.mkdir_p(blog_root)
+    open(File.join(blog_root, '_config.yml'), 'w') do |f|
+      f.write <<EOF
+# See https://github.com/mojombo/jekyll/wiki/Configuration
+EOF
+    end
+    FileUtils.mkdir_p(File.join(blog_root, '_includes'))
+    layouts_dir = File.join(blog_root, '_layouts')
+    FileUtils.mkdir_p(layouts_dir)
+    open(File.join(layouts_dir, 'default.html'), 'w') do |f|
+      f.write <<EOF
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>#{blog} - {{ page.title }}</title>
+  </head>
+  <body>
+    {{ content }}
+  </body>
+</html>
+EOF
+    end
+    posts_dir = File.join(blog_root, '_posts')
+    FileUtils.mkdir_p(posts_dir)
+    today = Date.today.to_s
+    open(File.join(posts_dir, "#{today}-hello-world.markdown"), 'w') do |f|
+      f.write <<EOF
+---
+layout: default
+title: Hello, World!
+---
+Hello, World!
+===============
+
+I started blogging with [Jekyll](http://jekyllrb.com/ "jekyll").
+EOF
+    end
+    FileUtils.mkdir_p(File.join(blog_root, '_site'))
+    open(File.join(blog_root, 'index.html'), 'w') do |f|
+      f.write <<EOF
+---
+layout: default
+title: Home
+---
+<h1>#{blog}</h1>
+<ol>
+{% for post in site.posts limit:10 %}
+    <li><a href="{{ post.url }}" alt="{{ post.title }}">{{ post.title }} {{ post.date | date_to_string }}</a></li>
+{% endfor %}
+</ol>
+EOF
+    end
+
+    puts "Generated basic structure in #{blog}"
+    puts "Please do 'cd #{blog} && jekyll --server'"
+    puts "You then should be able to reach your site at http://localhost:4000"
     
     exit(0)
   end
